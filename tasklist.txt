@@ -1,16 +1,4 @@
-to do|True
-hackerrank|True
-Hello|True
-mp|False
-New |False
-lang|False
-DSA|True
-What|False
-fd|True
-ai|True
-flat|False
-outside|False
-shopping|False
-how i met your mother|False
-sushi|False
-neww|False
+new|False|0
+ml|True|0
+ai|False|0
+hhteg|True|0

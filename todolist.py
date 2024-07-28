@@ -6,7 +6,7 @@ import os  # Import os for file path checking
 # Initialize the main window
 root = tk.Tk()
 root.title("To-Do List")
-root.geometry("350x600+400+100")  # Adjusted size to make it more compact
+root.geometry("350x750+400+50")  # Adjusted size to accommodate timer buttons
 root.resizable(False, False)
 
 # Check if the background image file exists
@@ -18,7 +18,7 @@ if os.path.exists(background_image_path):
         # Load the background image
         background_image = Image.open(background_image_path)
         # Resize the image to fit the window
-        background_image = background_image.resize((350, 600), Image.LANCZOS)  # Use Image.LANCZOS for high-quality resizing
+        background_image = background_image.resize((350, 750), Image.LANCZOS)  # Use Image.LANCZOS for high-quality resizing
         # Create a PhotoImage from the PIL Image
         background_photo = ImageTk.PhotoImage(background_image)
 
@@ -46,13 +46,18 @@ completed_task_color = "#D78AAD"  # Light pink for completed task background
 # Task list to hold tasks and their completion status
 task_list = []
 
+# Timer variables
+timer_running = False
+timer_paused = False
+timer_seconds = 0
+
 # Function to add a task
 def add_task():
     task = task_entry.get()
     task_entry.delete(0, tk.END)
 
     if task:
-        task_list.append({"task": task, "completed": False})
+        task_list.append({"task": task, "completed": False, "timer": None})
         update_task_file()
         display_tasks()
     else:
@@ -112,8 +117,8 @@ def open_task_file():
         for task in tasks:
             if task.strip():
                 task_info = task.strip().split('|')
-                if len(task_info) == 2:
-                    task_list.append({"task": task_info[0], "completed": task_info[1] == "True"})
+                if len(task_info) == 3:
+                    task_list.append({"task": task_info[0], "completed": task_info[1] == "True", "timer": int(task_info[2])})
                 else:
                     print(f"Skipping invalid task format: {task}")
         
@@ -126,15 +131,59 @@ def open_task_file():
 def update_task_file():
     with open("tasklist.txt", "w") as taskfile:
         for task_data in task_list:
-            taskfile.write(f"{task_data['task']}|{task_data['completed']}\n")
+            taskfile.write(f"{task_data['task']}|{task_data['completed']}|{task_data['timer'] if task_data['timer'] else 0}\n")
 
 # Function to create rounded corners for buttons
-def create_rounded_button(parent, text, command, x, y):
-    button = tk.Button(parent, text=text, command=command, relief='flat', bd=0, bg=button_color, fg=button_text_color, font=("Verdana", 10, "bold"), width=18)
+def create_rounded_button(parent, text, command, x, y, width=18):
+    button = tk.Button(parent, text=text, command=command, relief='flat', bd=0, bg=button_color, fg=button_text_color, font=("Verdana", 10, "bold"), width=width)
     button.place(x=x, y=y)
     button.bind("<Enter>", lambda e: button.config(bg=button_hover_color))
     button.bind("<Leave>", lambda e: button.config(bg=button_color))
     return button
+
+# Timer functions
+def start_pause_resume_timer():
+    global timer_running, timer_paused, timer_seconds
+    if timer_running:
+        # If the timer is running, pause it
+        timer_running = False  # Pause the timer
+        timer_paused = True
+        start_button.config(text="RESUME")
+    else:
+        if not timer_paused:  # Check if it's not paused, meaning it's a new timer start
+            try:
+                timer_seconds = int(timer_entry.get()) * 60  # Convert minutes to seconds
+                timer_entry.delete(0, tk.END)
+            except ValueError:
+                messagebox.showwarning("Invalid Input", "Please enter a valid number for the timer.")
+                return
+
+        # If the timer is paused or starting fresh
+        if timer_seconds > 0:
+            timer_running = True
+            timer_paused = False
+            update_timer()
+            start_button.config(text="PAUSE")  # Change to "Pause" when running
+
+def reset_timer():
+    global timer_seconds, timer_running, timer_paused
+    timer_running = False
+    timer_paused = False
+    timer_seconds = 0
+    timer_label.config(text="00:00")
+    start_button.config(text="START")  # Reset the button text to "Start"
+
+def update_timer():
+    global timer_seconds
+    if timer_running:
+        if timer_seconds > 0:
+            mins, secs = divmod(timer_seconds, 60)
+            timer_label.config(text=f"{mins:02}:{secs:02}")
+            timer_seconds -= 1
+            root.after(1000, update_timer)
+        else:
+            messagebox.showinfo("Time's up!", "The countdown timer has finished.")
+            reset_timer()
 
 # Setting up the UI components
 
@@ -192,9 +241,26 @@ scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 listbox.config(yscrollcommand=scrollbar.set)
 scrollbar.config(command=listbox.yview)
 
+# Timer frame
+timer_frame = tk.Frame(background_frame, bg=frame_bg_color)
+timer_frame.place(x=0, y=400, relwidth=1, height=100)  # Adjusted height for better spacing
+
+timer_label = tk.Label(timer_frame, text="00:00", font=("Arial", 14), bg=frame_bg_color, fg=text_color)
+timer_label.grid(row=0, column=0, padx=10, pady=5, sticky="w")  # Grid layout for better alignment
+
+timer_entry = tk.Entry(timer_frame, width=10, font=("Arial", 14), bd=1, bg="#FFFFFF", fg=text_color)
+timer_entry.grid(row=0, column=1, padx=10, pady=5)
+
+# Buttons for timer control
+start_button = tk.Button(timer_frame, text="START", font=("Arial", 14, "bold"), width=8, bg=button_color, fg=button_text_color, bd=0, command=start_pause_resume_timer)
+start_button.grid(row=1, column=0, padx=5, pady=5)
+
+reset_button = tk.Button(timer_frame, text="RESET", font=("Arial", 14, "bold"), width=8, bg=button_color, fg=button_text_color, bd=0, command=reset_timer)
+reset_button.grid(row=1, column=1, padx=5, pady=5)
+
 # Create a bottom frame for the buttons
 button_frame = tk.Frame(background_frame, bg=frame_bg_color)
-button_frame.place(x=0, y=450, relwidth=1, height=50)  # Positioned at the bottom of the task list
+button_frame.place(x=0, y=550, relwidth=1, height=50)  # Positioned at the bottom of the task list
 
 # Delete button
 delete_icon = tk.PhotoImage(file="Images/delete.png")
