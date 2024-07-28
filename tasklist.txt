@@ -1,0 +1,16 @@
+to do|True
+hackerrank|True
+Hello|True
+mp|False
+New |False
+lang|False
+DSA|True
+What|False
+fd|True
+ai|True
+flat|False
+outside|False
+shopping|False
+how i met your mother|False
+sushi|False
+neww|False
